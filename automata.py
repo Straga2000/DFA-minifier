@@ -1,254 +1,237 @@
-from graphics import *
-from random import randint
-from math import atan, sin, cos, pi
+from nodeGraphics import *
 
-white = color_rgb(255, 255, 255)
-red = color_rgb(255, 0, 0)
-green = color_rgb(124, 252, 0)
-yellow = color_rgb(247, 239, 1)
-bg_color = color_rgb(50, 50, 50)
+class SimpleGraph:
+    def __init__(self):
+        self.graph = {}
+        self.start = None
+        self.exits = []
+        self.visited = []
 
-stateList = {"start": 1, "end": -1}
+    def data_to_simple_graph(self, filename):
+        with open(filename) as f:
+            while True:
+                line = f.readline().split()
 
-class Node:
+                if line == []:
+                    break
+                elif line[0] == "start":
+                    if self.graph.get(line[1]) is None:
+                        self.graph[line[1]] = []
+                    self.start = line[1]
 
-    def __init__(self, text, radius, point=Point(200, 200)):
+                elif line[0] == "end":
 
-        self.state = []
+                    for i in range(1, len(line)):
+                        if self.graph.get(line[i]) is None:
+                            self.graph[line[i]] = []
+                        self.exits.append(line[i])
+                else:
 
-        self.circle = Circle(point, radius)
+                    if self.graph.get(line[0]) is None:
+                        self.graph[line[0]] = []
 
-        self.text = Text(point, text)
+                    if self.graph.get(line[1]) is None:
+                        self.graph[line[1]] = []
 
-        self.color = None
+                    self.graph[line[0]].append((line[1], line[2]))
 
-        self.arrowList = {}
+    def bfs(self, node):
+        for elem in self.graph[node]:
+            if elem[0] not in self.visited:
+                self.visited.append(elem[0])
+                self.bfs(elem[0])
 
-        self.isPrinted = False
-
-    def rewrite(self, point, window):
-        if self.isPrinted is True:
-            self.unprint()
-
-        if self.isPrinted is False:
-            self.circle = Circle(point, self.circle.getRadius())
-            self.circle.setFill(self.color)
-
-            self.text = Text(point, self.text.getText())
-
-            self.print(window)
-
-    def show_arrow_list(self):
-        for key in self.arrowList:
-            print(self.arrowList[key])
-
-    def print(self, window):
-
-        self.circle.draw(window)
-        self.text.draw(window)
-
-        #actualizarea interna
-        if self.circle.getCenter() != Point(0, 0):
-            for key in self.arrowList:
-                self.arrowList[key][1].rewrite(self, self.arrowList[key][0], window)
-        self.isPrinted = True
-
-    def unprint(self):
-        self.circle.undraw()
-        self.text.undraw()
-
-        for key in self.arrowList:
-            self.arrowList[key][1].unprint()
-
-        self.isPrinted = False
-
-    def get_center(self):
-        return self.circle.getCenter()
-
-    def get_text(self):
-        return self.text.getText()
-
-    def get_internal_table(self):
-        table = []
-        for key in self.arrowList:
-            table.append((self.arrowList[key][0].get_text(), self.arrowList[key][1].get_text()))
-        return table
-
-    def get_external_table(self, nodeName):
-        if self.arrowList.get(nodeName) is not None:
-            return self.arrowList[nodeName][0].get_text(), self.arrowList[nodeName][1].get_text()
+    def dfs(self, node, visited):
+        if node in self.exits:
+            return True
         else:
-            return None
+            if node not in visited:
 
-    def verify_state(self, value):
-        return stateList[value] in self.state
+                visited.append(node)
+                value = False
 
-    def set_state(self, string):
-        self.state.append(stateList[string])
+                for elem in self.graph[node]:
+                    value = value or self.dfs(elem[0], visited)
 
-    def set_color(self, value):
-        self.color = value
+                return value
 
-    def set_arrow(self, node, arrowValue):
-        arrow = Arrow(arrowValue)
-        self.arrowList[node.get_text()] = (node, arrow)
+        return False
 
-    def set_circle(self, point):
-        self.circle = Circle(point, self.circle.getRadius())
+    def delete_inaccessible_nodes(self):
+        self.visited = []
+        self.bfs(self.start)
 
-    def get_next_node_name(self, arrowValue):
+        newGraph = {}
 
-        for key in self.arrowList:
-            if self.arrowList[key][1].get_text() == arrowValue:
-                return self.arrowList[key][0].get_text()
+        # for key in self.graph:
+        #     if self.dfs(key, []):
+        #         newGraph[key] = self.graph[key]
 
-        return None
+        for key in self.graph:
+             if key in self.visited and newGraph.get(key) is None:
+                 newGraph[key] = self.graph[key]
 
+        # refacem framework-ul de apel
+        self.graph = newGraph
+        self.visited = []
 
-class Arrow:
+        #print(self.graph)
 
-    def __init__(self, text):
+    def compare_nodes(self, obj1, obj2, equivalence):
 
-        self.start, self.finish, self.angle = None, None, None
-        self.line = None
+        if len(obj1) != len(obj2):
+            return False
 
-        self.center = None
-        self.text = Text(Point(0, 0), text)
+        for elem1 in obj1:
 
-        self.isPrinted = False
+            found = False
 
-    def __repr__(self):
-        return "Arrow {}".format(self.start, self.finish)
+            for elem2 in obj2:
 
-    def rewrite(self, start, finish, window):
+                if elem1[1] == elem2[1]:
+                    if equivalence[elem1[0]] != equivalence[elem2[0]]:
+                        return False
 
-        if self.isPrinted == True:
-            self.unprint()
+                    found = True
+                    break
 
-        if self.isPrinted == False:
-            self.start, self.finish, self.angle = self.get_end_points(start, finish)
-
-            self.line = Line(self.start, self.finish)
-            self.line.setArrow("last")
-
-            self.center = self.line.getCenter()
-            text_pos = Point(self.center.getX() - cos(self.angle + pi / 2) * 20,
-                             self.center.getY() - sin(self.angle + pi / 2) * 20)
-            self.text = Text(text_pos, self.text.getText())
-
-            self.set_color_properties(white)
-
-            self.print(window)
-
-    def set_color_properties(self, value):
-        self.line.setFill(value)
-        self.text.setTextColor(value)
-
-    def set_text_properties(self, value):
-        self.text.setText(value)
-
-    def print(self, window):
-        self.line.draw(window)
-        self.text.draw(window)
-        self.isPrinted = True
-
-    def unprint(self):
-        self.line.undraw()
-        self.text.undraw()
-        self.isPrinted = False
-
-    def get_text(self):
-        return self.text.getText()
-
-    def get_end_points(self, start, finish):
-        center1 = start.circle.getCenter()
-        c1x = center1.getX()
-        c1y = center1.getY()
-        r1 = start.circle.getRadius()
-
-        center2 = finish.circle.getCenter()
-        c2x = center2.getX()
-        c2y = center2.getY()
-        r2 = finish.circle.getRadius()
-
-        if c1x != c2x:
-
-            a = atan((c1y - c2y) / (c1x - c2x))  # unghiul liniei fata de ox
-
-            if c1x > c2x:
-                startPoint = Point(c1x - r1 * cos(a), c1y - r1 * sin(a))
-                finishPoint = Point(c2x + r2 * cos(a), c2y + r2 * sin(a))
-            else:
-
-                startPoint = Point(c1x + r1 * cos(a), c1y + r1 * sin(a))
-                finishPoint = Point(c2x - r2 * cos(a), c2y - r2 * sin(a))
-        else:
-            a = pi / 2
-            ct = 1.5
-
-            if c1y < c2y:
-                startPoint = Point(c1x + ct * r1, c1y + ct * r1)
-                finishPoint = Point(c2x + r2, c2y + r2)
-            else:
-                startPoint = Point(c1x - ct * r1, c1y - ct * r1)
-                finishPoint = Point(c2x - r2, c2y - r2)
-
-        return startPoint, finishPoint, a
-
-
-class Reader:
-    def __init__(self, point, length):
-
-        self.entry = Entry(point, length)
-
-    def get_input(self):
-
-        return self.entry.getText()
-
-    def set_text(self, text):
-
-        return self.entry.setText(text)
-
-    def print_reader(self, win):
-
-        return self.entry.draw(win)
-
-    def read_word(self, win):
-
-        # citirea cuvantului
-        if win.getMouse():
-
-            line = self.get_input()
-            self.set_text("")
-
-            if line == "*":
-                win.close()
+            if found is False:
                 return False
 
-            if line == "":
-                return None
+        return True
 
-            elif line == line.split()[0]:
-                # daca "cuvantul"(din limbajul automatului) e dat caracter cu caracter (sau daca e dat cuvant cu cuvant)
-                word = list(line)
+    def compare_tables(self, antTable, curTable):
 
-            else:
-                word = line.split()
+        if antTable is None:
+            return False
 
-            return word
+        for key in antTable:
+            if antTable[key] != curTable[key]:
+                return False
+        return True
 
+    def get_table(self, antTable):
+        tableEquivalence = {}
+
+        if antTable is None:
+
+            #print("da")
+            for key in self.graph:
+
+                if key in self.exits:
+                    tableEquivalence[key] = 1
+                else:
+                    tableEquivalence[key] = 0
+        else:
+            #print("nu")
+            # initializarea id-urilor
+            idVal = 0
+            for key in antTable:
+                if antTable[key] > idVal:
+                    idVal = antTable[key] + 1
+
+            for key1 in antTable:
+                for key2 in antTable:
+                    if key1 != key2:
+
+                        ok = self.compare_nodes(self.graph[key1], self.graph[key2], antTable)
+                        #print(key1, ":", self.graph[key1], key2, ":", self.graph[key2], ok)
+
+                        if ok is False:
+                            if tableEquivalence.get(key2) is None:
+
+                                is_single = True
+                                for key in antTable:
+                                    if key2 != key and antTable[key2] == antTable[key]:
+                                        is_single = False
+                                        break
+
+                                #if key2 == 'f':
+                                #print(is_single)
+
+                                if is_single is True:
+                                    tableEquivalence[key2] = antTable[key2]
+                                elif is_single is False:
+                                    tableEquivalence[key2] = idVal
+                                    idVal += 1
+                        else:
+                            tableEquivalence[key1] = antTable[key1]
+                            tableEquivalence[key2] = antTable[key1]
+
+        return tableEquivalence
+
+    def minimize(self):
+
+        self.delete_inaccessible_nodes()
+
+        antTable = None
+        curTable = self.get_table(antTable)
+        #print("acestea sunt tablele:", antTable, curTable)
+
+        # aplicam myhill-nerode
+        while not self.compare_tables(antTable, curTable):
+            antTable = curTable
+            curTable = self.get_table(antTable)
+            #print(antTable, curTable)
+
+        rename = {}
+
+        for key in curTable:
+            if rename.get(curTable[key]) is None:
+                rename[curTable[key]] = key
+        # structura de rename ma ajuta sa rescriu corect graful
+
+        newGraph = {}
+
+        for key in self.graph:
+
+            for i in range(len(self.graph[key])):
+                self.graph[key][i] = (rename[curTable[self.graph[key][i][0]]], self.graph[key][i][1])
+
+            if key == rename[curTable[key]]:
+                newGraph[key] = self.graph[key]
+
+        self.graph = newGraph
+
+        self.start = rename[curTable[self.start]]
+
+        for i in range(len(self.exits)):
+            self.exits[i] = rename[curTable[self.exits[i]]]
+
+        #eliminam duplicatele
+        self.exits = list(set(self.exits))
+
+    def get_structure(self):
+        return self.graph, self.start, self.exits
 
 class Graph:
     def __init__(self):
         self.graph = {}
         self.start = None
 
-    def set_graph(self, graph, start):
+    def set_graph(self, obj):
+        graph, start, exits = obj
 
         for key in graph:
-            self.graph[key] = graph[key]
 
-        self.start = start
+            if key == start:
+                self.add_node_with_state(key, "start")
+                self.start = self.graph[key]
+            elif key in exits:
+                self.add_node_with_state(key, "end")
+            else:
+                self.add_node(key)
+
+            for elem in graph[key]:
+                if elem[0] == start:
+                    self.add_node_with_state(elem[0], "start")
+                    self.start = self.graph[elem[0]]
+                elif key in exits:
+                    self.add_node_with_state(elem[0], "end")
+                else:
+                    self.add_node(elem[0])
+
+                self.graph[key].set_arrow(self.graph[elem[0]], elem[1])
 
     def show_nodes(self):
         for key in self.graph:
@@ -258,6 +241,12 @@ class Graph:
         if self.graph.get(name) is None:
             radius = randint(30, 50)
             self.graph[name] = Node(name, radius)
+
+    def add_node_with_state(self, name, state="nothing"):
+        if self.graph.get(name) is None:
+            radius = randint(30, 50)
+            self.graph[name] = Node(name, radius)
+        self.graph[name].set_state(state)
 
     def data_to_structure(self, filename):
 
@@ -324,6 +313,8 @@ class Graph:
         for key in self.graph:
             self.graph[key].unprint()
 
+        self.clean_graph()
+
     def draw_graph(self, window):
 
         for key in self.graph:
@@ -348,32 +339,6 @@ class Graph:
             for newKey in self.graph:
                 self.graph[newKey].rewrite(self.graph[newKey].get_center(), window.win)
 
-class WindowObject:
-    def __init__(self, name, width, height):
-
-        self.width = width
-        self.height = height
-        self.win = GraphWin(name, width, height)
-        self.win.setBackground(bg_color)
-
-        self.infoText = Text(Point(self.width / 2, self.height - 30), "")
-        self.infoText.setTextColor(white)
-        self.infoText.setSize(15)
-
-        self.entry = Reader(Point(self.width / 2, 30), 20)
-        self.entry.print_reader(self.win)
-
-    def print_message(self, text):
-        self.infoText.undraw()
-        self.infoText.setText(text)
-        self.infoText.draw(self.win)
-
-    def unprint_message(self):
-        self.infoText.undraw()
-
-    def read_word(self):
-        return self.entry.read_word(self.win)
-
-    def mouse_click(self):
-        return self.win.getMouse()
-
+    def clean_graph(self):
+        self.graph = {}
+        self.start = None
