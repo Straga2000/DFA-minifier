@@ -1,16 +1,10 @@
-start a
-end c d e
-a b 0
-b a 0
-a c 1
-b d 1
-d f 1
-d e 0
-c f 1
-c e 0
-e e 0
-e f 1
-f f 1
-f f 0
-f l 2
-z z 0
+start 0
+end 7
+0 1 a
+1 2 a
+2 3 a
+3 4 a
+4 5 a
+5 6 a
+6 7 a
+7 7 a

@@ -15,7 +15,11 @@ class Reader:
 
     def print_reader(self, win):
 
-        return self.entry.draw(win)
+        self.entry.draw(win)
+
+    def unprint_reader(self):
+
+        self.entry.undraw()
 
     def read_word(self, win):
 
@@ -55,6 +59,9 @@ class WindowObject:
 
         self.entry = Reader(Point(self.width / 2, 30), 20)
         self.entry.print_reader(self.win)
+
+    def disable_reader(self):
+        self.entry.unprint_reader()
 
     def print_message(self, text):
         self.infoText.undraw()

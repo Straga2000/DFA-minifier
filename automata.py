@@ -63,10 +63,6 @@ class SimpleGraph:
 
         newGraph = {}
 
-        # for key in self.graph:
-        #     if self.dfs(key, []):
-        #         newGraph[key] = self.graph[key]
-
         for key in self.graph:
              if key in self.visited and newGraph.get(key) is None:
                  newGraph[key] = self.graph[key]
@@ -87,10 +83,11 @@ class SimpleGraph:
             found = False
 
             for elem2 in obj2:
-
                 if elem1[1] == elem2[1]:
-                    if equivalence[elem1[0]] != equivalence[elem2[0]]:
-                        return False
+                    #print(elem1[0], elem2[0])
+                    for line in equivalence:
+                        if elem2[0] in line and elem1[0] not in line:
+                            return False
 
                     found = True
                     break
@@ -100,106 +97,137 @@ class SimpleGraph:
 
         return True
 
-    def compare_tables(self, antTable, curTable):
+    def get_signature(self, table):
+        if table is None:
+            return [0]
+        return [len(line) for line in table]
 
-        if antTable is None:
-            return False
-
-        for key in antTable:
-            if antTable[key] != curTable[key]:
-                return False
-        return True
 
     def get_table(self, antTable):
-        tableEquivalence = {}
 
+        table = []
         if antTable is None:
 
-            #print("da")
+            # construim primele doua multimi
+            table.append([])
+            table.append([])
+
             for key in self.graph:
-
                 if key in self.exits:
-                    tableEquivalence[key] = 1
+                    table[0].append(key)
                 else:
-                    tableEquivalence[key] = 0
+                    table[1].append(key)
         else:
-            #print("nu")
-            # initializarea id-urilor
-            idVal = 0
-            for key in antTable:
-                if antTable[key] > idVal:
-                    idVal = antTable[key] + 1
 
-            for key1 in antTable:
-                for key2 in antTable:
-                    if key1 != key2:
+            #initializarea tabelului
+            for line in antTable:
 
-                        ok = self.compare_nodes(self.graph[key1], self.graph[key2], antTable)
-                        #print(key1, ":", self.graph[key1], key2, ":", self.graph[key2], ok)
+                newLine = []
+                for i in range(len(line)):
+                    newLine.append(line[i])
 
-                        if ok is False:
-                            if tableEquivalence.get(key2) is None:
+                table.append(newLine)
 
-                                is_single = True
-                                for key in antTable:
-                                    if key2 != key and antTable[key2] == antTable[key]:
-                                        is_single = False
-                                        break
+            for line in table:
 
-                                #if key2 == 'f':
-                                #print(is_single)
+                newLine = []
+                for i in range(len(line)):
 
-                                if is_single is True:
-                                    tableEquivalence[key2] = antTable[key2]
-                                elif is_single is False:
-                                    tableEquivalence[key2] = idVal
-                                    idVal += 1
-                        else:
-                            tableEquivalence[key1] = antTable[key1]
-                            tableEquivalence[key2] = antTable[key1]
+                    verify = True
+                    for j in range(i):
+                        if line[i] != 0 and line[j] != 0:
+                            if not self.compare_nodes(self.graph[line[i]], self.graph[line[j]], antTable):
+                                verify = False
+                                break
 
-        return tableEquivalence
+                    if verify is False:
+                        newLine.append(line[i])
+                        line[i] = 0
+
+                if len(newLine) != 0:
+                    table.append(newLine)
+        return table
 
     def minimize(self):
 
-        self.delete_inaccessible_nodes()
-
-        antTable = None
-        curTable = self.get_table(antTable)
-        #print("acestea sunt tablele:", antTable, curTable)
-
-        # aplicam myhill-nerode
-        while not self.compare_tables(antTable, curTable):
+        curTable = None
+        while True:
             antTable = curTable
             curTable = self.get_table(antTable)
-            #print(antTable, curTable)
 
+            if self.get_signature(antTable) == self.get_signature(curTable):
+                break
+
+        #print(curTable)
+        #clean the table
         rename = {}
 
-        for key in curTable:
-            if rename.get(curTable[key]) is None:
-                rename[curTable[key]] = key
-        # structura de rename ma ajuta sa rescriu corect graful
+        for line in curTable:
+            for i in range(len(line)):
+                if line[i] != 0:
+                    rename[line[i]] = line[0]
+
+        #print(rename)
 
         newGraph = {}
 
         for key in self.graph:
 
-            for i in range(len(self.graph[key])):
-                self.graph[key][i] = (rename[curTable[self.graph[key][i][0]]], self.graph[key][i][1])
+            if key == rename[key]:
 
-            if key == rename[curTable[key]]:
                 newGraph[key] = self.graph[key]
+                for i in range(len(self.graph[key])):
+                    self.graph[key][i] = (rename[self.graph[key][i][0]], self.graph[key][i][1])
 
         self.graph = newGraph
 
-        self.start = rename[curTable[self.start]]
+        self.start = rename[self.start]
 
         for i in range(len(self.exits)):
-            self.exits[i] = rename[curTable[self.exits[i]]]
+             self.exits[i] = rename[self.exits[i]]
 
         #eliminam duplicatele
         self.exits = list(set(self.exits))
+
+    # def minimize(self):
+    #
+    #     self.delete_inaccessible_nodes()
+    #
+    #     antTable = None
+    #     curTable = self.get_table(antTable)
+    #
+    #     # aplicam myhill-nerode
+    #     while not self.compare_tables(antTable, curTable):
+    #         antTable = curTable
+    #         curTable = self.get_table(antTable)
+    #         print(antTable, curTable)
+    #
+    #     rename = {}
+    #
+    #     for key in curTable:
+    #         if rename.get(curTable[key]) is None:
+    #             rename[curTable[key]] = key
+    #     # structura de rename ma ajuta sa rescriu corect graful
+    #
+    #     newGraph = {}
+    #
+    #     for key in self.graph:
+    #
+    #         for i in range(len(self.graph[key])):
+    #             self.graph[key][i] = (rename[curTable[self.graph[key][i][0]]], self.graph[key][i][1])
+    #
+    #         if key == rename[curTable[key]]:
+    #             newGraph[key] = self.graph[key]
+    #
+    #     self.graph = newGraph
+    #
+    #     self.start = rename[curTable[self.start]]
+    #
+    #     for i in range(len(self.exits)):
+    #         self.exits[i] = rename[curTable[self.exits[i]]]
+    #
+    #     #eliminam duplicatele
+    #     self.exits = list(set(self.exits))
 
     def get_structure(self):
         return self.graph, self.start, self.exits
@@ -337,7 +365,7 @@ class Graph:
             self.graph[key].rewrite(point, window.win)
 
             for newKey in self.graph:
-                self.graph[newKey].rewrite(self.graph[newKey].get_center(), window.win)
+                self.graph[newKey].update(window.win)
 
     def clean_graph(self):
         self.graph = {}

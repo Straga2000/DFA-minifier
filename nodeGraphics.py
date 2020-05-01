@@ -2,7 +2,7 @@ from CONSTANTS_AND_LIBRARIES import *
 
 class Node:
 
-    def __init__(self, text, radius, point=Point(200, 200)):
+    def __init__(self, text, radius, point=Point(0, 0)):
 
         self.state = []
 
@@ -15,6 +15,12 @@ class Node:
         self.arrowList = {}
 
         self.isPrinted = False
+
+    def update(self, window):
+        if self.isPrinted is True:
+            for key in self.arrowList:
+                if self.arrowList[key][0].isPrinted is True:
+                    self.arrowList[key][1].rewrite(self, self.arrowList[key][0], window)
 
     def rewrite(self, point, window):
         if self.isPrinted is True:
@@ -39,8 +45,10 @@ class Node:
 
         #actualizarea interna
         if self.circle.getCenter() != Point(0, 0):
+            #print(self.circle.getCenter(), Point(0, 0))
             for key in self.arrowList:
-                self.arrowList[key][1].rewrite(self, self.arrowList[key][0], window)
+                if self.arrowList[key][0].isPrinted is True:
+                    self.arrowList[key][1].rewrite(self, self.arrowList[key][0], window)
         self.isPrinted = True
 
     def unprint(self):
@@ -48,7 +56,8 @@ class Node:
         self.text.undraw()
 
         for key in self.arrowList:
-            self.arrowList[key][1].unprint()
+            if self.arrowList[key][1].isPrinted is True:
+                self.arrowList[key][1].unprint()
 
         self.isPrinted = False
 
@@ -57,18 +66,6 @@ class Node:
 
     def get_text(self):
         return self.text.getText()
-
-    def get_internal_table(self):
-        table = []
-        for key in self.arrowList:
-            table.append((self.arrowList[key][0].get_text(), self.arrowList[key][1].get_text()))
-        return table
-
-    def get_external_table(self, nodeName):
-        if self.arrowList.get(nodeName) is not None:
-            return self.arrowList[nodeName][0].get_text(), self.arrowList[nodeName][1].get_text()
-        else:
-            return None
 
     def verify_state(self, value):
         return stateList[value] in self.state
